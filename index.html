@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Wissensabfragen</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <div class="login-shell" id="loginShell">
+    <div class="login-box">
+      <div class="login-logo">
+        <div class="login-hex">W</div>
+        <div class="login-title">Wissensabfragen</div>
+        <div class="login-subtitle">Prüfungsplattform v1.0</div>
+      </div>
+
+      <div id="modeSelect">
+        <button class="btn btn-primary w-full mb-16" onclick="showAdminLogin()" style="justify-content:center">
+          ⬡ Administrator
+        </button>
+        <button class="btn btn-ghost w-full" onclick="showParticipantLogin()" style="justify-content:center">
+          ◈ Teilnehmer / Prüfling
+        </button>
+        <div class="text-xs text-muted font-mono mt-24" style="text-align:center;letter-spacing:1px">
+          Sitzungscode benötigt für Teilnahme
+        </div>
+      </div>
+
+      <!-- Admin Login -->
+      <div id="adminLogin" class="hidden">
+        <div class="page-label mb-16">Admin-Zugang</div>
+        <div class="form-group">
+          <label class="form-label">PIN</label>
+          <input type="password" id="adminPinInput" class="form-input" placeholder="••••" maxlength="8"
+            onkeydown="if(event.key==='Enter')doAdminLogin()" />
+          <div class="form-hint">Standard: 1234 (in Einstellungen änderbar)</div>
+        </div>
+        <button class="btn btn-primary w-full" onclick="doAdminLogin()" style="justify-content:center">
+          Einloggen
+        </button>
+        <button class="btn btn-ghost w-full mt-8" onclick="showModeSelect()" style="justify-content:center">
+          Zurück
+        </button>
+      </div>
+
+      <!-- Participant Login -->
+      <div id="participantLogin" class="hidden">
+        <div class="page-label mb-16">Sitzungsbeitritt</div>
+        <div class="form-group">
+          <label class="form-label">Dein Name</label>
+          <input type="text" id="participantName" class="form-input" placeholder="Vollständiger Name" />
+        </div>
+        <div class="form-group">
+          <label class="form-label">Sitzungscode</label>
+          <input type="text" id="sessionCode" class="form-input" placeholder="z.B. SZ-2024-001"
+            style="font-family:var(--font-mono);letter-spacing:2px;text-transform:uppercase"
+            onkeydown="if(event.key==='Enter')joinSession()" />
+        </div>
+        <button class="btn btn-primary w-full" onclick="joinSession()" style="justify-content:center">
+          Sitzung beitreten
+        </button>
+        <button class="btn btn-ghost w-full mt-8" onclick="showModeSelect()" style="justify-content:center">
+          Zurück
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <div class="toast-container" id="toastContainer"></div>
+
+  <footer class="app-footer" style="position:fixed;bottom:0;width:100%;background:var(--bg-primary)">
+    Made by Sora &nbsp;·&nbsp; Wissensabfragen v1.0
+  </footer>
+
+  <script src="app.js"></script>
+  <script>
+    function showModeSelect() {
+      document.getElementById('modeSelect').classList.remove('hidden');
+      document.getElementById('adminLogin').classList.add('hidden');
+      document.getElementById('participantLogin').classList.add('hidden');
+    }
+    function showAdminLogin() {
+      document.getElementById('modeSelect').classList.add('hidden');
+      document.getElementById('adminLogin').classList.remove('hidden');
+      setTimeout(() => document.getElementById('adminPinInput').focus(), 50);
+    }
+    function showParticipantLogin() {
+      document.getElementById('modeSelect').classList.add('hidden');
+      document.getElementById('participantLogin').classList.remove('hidden');
+      setTimeout(() => document.getElementById('participantName').focus(), 50);
+    }
+    function doAdminLogin() {
+      const pin = document.getElementById('adminPinInput').value;
+      if (!pin) { APP.toast('PIN eingeben', 'error'); return; }
+      if (APP.adminLogin(pin)) {
+        window.location.href = 'admin.html';
+      } else {
+        APP.toast('Falscher PIN', 'error');
+        document.getElementById('adminPinInput').value = '';
+        document.getElementById('adminPinInput').focus();
+      }
+    }
+    function joinSession() {
+      const name = document.getElementById('participantName').value.trim();
+      const code = document.getElementById('sessionCode').value.trim().toUpperCase();
+      if (!name) { APP.toast('Name eingeben', 'error'); return; }
+      if (!code) { APP.toast('Sitzungscode eingeben', 'error'); return; }
+
+      const sessions = APP.get(APP.storageKeys.sessions);
+      const session = sessions.find(s => s.code === code && s.status === 'active');
+      if (!session) {
+        APP.toast('Sitzung nicht gefunden oder nicht aktiv', 'error');
+        return;
+      }
+      sessionStorage.setItem('wa_participant_name', name);
+      sessionStorage.setItem('wa_session_id', session.id);
+      window.location.href = `exam.html?s=${session.id}`;
+    }
+
+    // Auto-redirect if already logged in
+    if (APP.isAdmin()) window.location.href = 'admin.html';
+  </script>
+</body>
+</html>

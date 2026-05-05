@@ -1,0 +1,1136 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Admin – Wissensabfragen</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <div class="app-shell" id="appShell">
+
+    <!-- TOPBAR -->
+    <header class="topbar">
+      <div class="topbar-brand">
+        <div class="brand-logo">W</div>
+        <span class="brand-name">Wissens<span>abfragen</span></span>
+      </div>
+      <div class="topbar-right">
+        <div class="status-indicator">
+          <div class="status-dot"></div>
+          <span id="statusText">ADMIN</span>
+        </div>
+        <button class="btn btn-ghost btn-sm" onclick="adminLogout()">Abmelden</button>
+      </div>
+    </header>
+
+    <!-- SIDEBAR -->
+    <nav class="sidebar">
+      <div class="sidebar-section">Navigation</div>
+      <a class="nav-item active" onclick="showView('dashboard')" href="#">
+        <span class="nav-icon">◈</span> Dashboard
+      </a>
+      <a class="nav-item" onclick="showView('sessions')" href="#">
+        <span class="nav-icon">⬡</span> Sitzungen
+        <span class="nav-badge" id="badgeSessions">0</span>
+      </a>
+      <a class="nav-item" onclick="showView('questions')" href="#">
+        <span class="nav-icon">✎</span> Fragenkatalog
+        <span class="nav-badge" id="badgeQuestions">0</span>
+      </a>
+      <a class="nav-item" onclick="showView('materials')" href="#">
+        <span class="nav-icon">◻</span> Lernmaterial
+      </a>
+      <div class="sidebar-section">Auswertung</div>
+      <a class="nav-item" onclick="showView('results')" href="#">
+        <span class="nav-icon">▣</span> Ergebnisse
+        <span class="nav-badge" id="badgeResults">0</span>
+      </a>
+      <a class="nav-item" onclick="showView('grading')" href="#">
+        <span class="nav-icon">✓</span> Bewertung
+        <span class="nav-badge" id="badgePending">0</span>
+      </a>
+      <div class="sidebar-section">System</div>
+      <a class="nav-item" onclick="showView('settings')" href="#">
+        <span class="nav-icon">⚙</span> Einstellungen
+      </a>
+    </nav>
+
+    <!-- MAIN -->
+    <main class="main-content" id="mainContent">
+
+      <!-- ── DASHBOARD ── -->
+      <div id="viewDashboard">
+        <div class="page-header">
+          <div class="page-label">Übersicht</div>
+          <h1 class="page-title">Dashboard</h1>
+          <p class="page-subtitle" id="dashSubtitle"></p>
+        </div>
+        <div class="stats-grid" id="statsGrid"></div>
+        <div class="grid-2">
+          <div class="card">
+            <div class="card-header">
+              <div class="card-title">Aktive Sitzungen</div>
+              <button class="btn btn-sm btn-primary" onclick="showView('sessions')">Alle</button>
+            </div>
+            <div id="dashActiveSessions"></div>
+          </div>
+          <div class="card">
+            <div class="card-header">
+              <div class="card-title">Offene Bewertungen</div>
+              <button class="btn btn-sm btn-ghost" onclick="showView('grading')">Prüfen</button>
+            </div>
+            <div id="dashPending"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ── SESSIONS ── -->
+      <div id="viewSessions" class="hidden">
+        <div class="page-header flex items-center justify-between">
+          <div>
+            <div class="page-label">Verwaltung</div>
+            <h1 class="page-title">Sitzungen</h1>
+          </div>
+          <button class="btn btn-primary" onclick="APP.openModal('modalNewSession')">+ Neue Sitzung</button>
+        </div>
+        <div class="card">
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>Name</th><th>Code</th><th>Datum</th><th>Fragen</th><th>Status</th><th>Teilnehmer</th><th>Aktionen</th>
+                </tr>
+              </thead>
+              <tbody id="sessionsTable"></tbody>
+            </table>
+          </div>
+          <div id="sessionsEmpty" class="empty-state hidden">
+            <div class="empty-icon">⬡</div>
+            <div class="empty-title">Keine Sitzungen</div>
+            <div class="text-muted text-sm">Erstelle deine erste Sitzung.</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ── QUESTIONS ── -->
+      <div id="viewQuestions" class="hidden">
+        <div class="page-header flex items-center justify-between">
+          <div>
+            <div class="page-label">Katalog</div>
+            <h1 class="page-title">Fragenkatalog</h1>
+          </div>
+          <div class="flex gap-8">
+            <button class="btn btn-ghost" onclick="APP.openModal('modalImportMaterial')">KI-Import</button>
+            <button class="btn btn-primary" onclick="openNewQuestion()">+ Neue Frage</button>
+          </div>
+        </div>
+        <div class="card">
+          <div class="flex gap-8 mb-16" style="flex-wrap:wrap">
+            <input type="text" id="qSearch" class="form-input" placeholder="Suche..." style="flex:1;min-width:200px" oninput="renderQuestions()" />
+            <select class="form-select" id="qTypeFilter" style="width:180px" onchange="renderQuestions()">
+              <option value="">Alle Typen</option>
+              <option value="single_choice">Auswahlfrage</option>
+              <option value="multiple_choice">Multiple Choice</option>
+              <option value="freitext">Freitext</option>
+              <option value="zuordnung">Zuordnung</option>
+            </select>
+          </div>
+          <div id="questionsList"></div>
+          <div id="questionsEmpty" class="empty-state hidden">
+            <div class="empty-icon">✎</div>
+            <div class="empty-title">Keine Fragen</div>
+            <div class="text-muted text-sm">Erstelle Fragen manuell oder importiere via KI.</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ── MATERIALS ── -->
+      <div id="viewMaterials" class="hidden">
+        <div class="page-header flex items-center justify-between">
+          <div>
+            <div class="page-label">Wissensbasis</div>
+            <h1 class="page-title">Lernmaterial</h1>
+          </div>
+          <button class="btn btn-primary" onclick="APP.openModal('modalNewMaterial')">+ Neues Material</button>
+        </div>
+        <div id="materialsList" class="grid-2"></div>
+        <div id="materialsEmpty" class="empty-state hidden">
+          <div class="empty-icon">◻</div>
+          <div class="empty-title">Kein Material</div>
+          <div class="text-muted text-sm">Füge Gesetze, Codes oder Ablaufbeschreibungen hinzu.</div>
+        </div>
+      </div>
+
+      <!-- ── RESULTS ── -->
+      <div id="viewResults" class="hidden">
+        <div class="page-header">
+          <div class="page-label">Auswertung</div>
+          <h1 class="page-title">Ergebnisse</h1>
+        </div>
+        <div class="form-group" style="max-width:300px">
+          <label class="form-label">Sitzung filtern</label>
+          <select class="form-select" id="resultsSessionFilter" onchange="renderResults()">
+            <option value="">Alle Sitzungen</option>
+          </select>
+        </div>
+        <div id="resultsList"></div>
+        <div id="resultsEmpty" class="empty-state hidden">
+          <div class="empty-icon">▣</div>
+          <div class="empty-title">Keine Ergebnisse</div>
+          <div class="text-muted text-sm">Noch keine Einreichungen vorhanden.</div>
+        </div>
+      </div>
+
+      <!-- ── GRADING ── -->
+      <div id="viewGrading" class="hidden">
+        <div class="page-header">
+          <div class="page-label">Manuelle Bewertung</div>
+          <h1 class="page-title">Freitext-Bewertung</h1>
+        </div>
+        <div id="gradingList"></div>
+        <div id="gradingEmpty" class="empty-state hidden">
+          <div class="empty-icon">✓</div>
+          <div class="empty-title">Alles bewertet</div>
+          <div class="text-muted text-sm">Keine offenen Freitextantworten.</div>
+        </div>
+      </div>
+
+      <!-- ── SETTINGS ── -->
+      <div id="viewSettings" class="hidden">
+        <div class="page-header">
+          <div class="page-label">Konfiguration</div>
+          <h1 class="page-title">Einstellungen</h1>
+        </div>
+        <div class="grid-2">
+          <div class="card">
+            <div class="card-header"><div class="card-title">Admin-PIN</div></div>
+            <div class="form-group">
+              <label class="form-label">Aktueller PIN</label>
+              <input type="password" id="oldPin" class="form-input" placeholder="••••" />
+            </div>
+            <div class="form-group">
+              <label class="form-label">Neuer PIN</label>
+              <input type="password" id="newPin" class="form-input" placeholder="••••" />
+            </div>
+            <button class="btn btn-primary" onclick="changePin()">PIN ändern</button>
+          </div>
+          <div class="card">
+            <div class="card-header"><div class="card-title">KI-API</div></div>
+            <div class="form-group">
+              <label class="form-label">Anthropic API Key</label>
+              <input type="password" id="apiKeyInput" class="form-input" placeholder="sk-ant-..." />
+              <div class="form-hint">Wird lokal gespeichert. Niemals geteilt.</div>
+            </div>
+            <button class="btn btn-primary" onclick="saveApiKey()">Speichern</button>
+          </div>
+          <div class="card">
+            <div class="card-header"><div class="card-title">Daten-Export</div></div>
+            <p class="text-secondary text-sm mb-16">Exportiere alle Daten als JSON-Backup.</p>
+            <button class="btn btn-ghost" onclick="exportData()">Export herunterladen</button>
+          </div>
+          <div class="card">
+            <div class="card-header"><div class="card-title">Daten-Import</div></div>
+            <p class="text-secondary text-sm mb-16">Importiere ein JSON-Backup.</p>
+            <input type="file" id="importFile" accept=".json" class="hidden" onchange="importData(event)" />
+            <button class="btn btn-ghost" onclick="document.getElementById('importFile').click()">Datei wählen</button>
+          </div>
+          <div class="card">
+            <div class="card-header"><div class="card-title">Daten löschen</div></div>
+            <p class="text-secondary text-sm mb-16">Alle Daten unwiderruflich löschen.</p>
+            <button class="btn btn-danger" onclick="clearAllData()">Alle Daten löschen</button>
+          </div>
+        </div>
+      </div>
+
+    </main>
+  </div>
+
+  <!-- ════════════════ MODALS ════════════════ -->
+
+  <!-- New Session -->
+  <div class="modal-overlay" id="modalNewSession">
+    <div class="modal">
+      <div class="modal-header">
+        <span class="modal-title">Neue Sitzung erstellen</span>
+        <button class="modal-close" onclick="APP.closeModal('modalNewSession')">✕</button>
+      </div>
+      <div class="modal-body">
+        <div class="form-group">
+          <label class="form-label">Sitzungsname</label>
+          <input type="text" id="sessionName" class="form-input" placeholder="z.B. Dienstprüfung Mai 2025" />
+        </div>
+        <div class="grid-2">
+          <div class="form-group">
+            <label class="form-label">Datum</label>
+            <input type="datetime-local" id="sessionDate" class="form-input" />
+          </div>
+          <div class="form-group">
+            <label class="form-label">Zeitlimit (Min.)</label>
+            <input type="number" id="sessionTimer" class="form-input" value="60" min="0" />
+            <div class="form-hint">0 = kein Limit</div>
+          </div>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Fragen auswählen</label>
+          <select class="form-select" id="sessionQMode">
+            <option value="all">Alle Fragen aus Katalog</option>
+            <option value="random">Zufällige Auswahl</option>
+            <option value="pick">Manuell auswählen</option>
+          </select>
+        </div>
+        <div id="sessionQCount" class="form-group hidden">
+          <label class="form-label">Anzahl Fragen</label>
+          <input type="number" id="sessionQCountVal" class="form-input" value="20" min="1" />
+        </div>
+        <div id="sessionQPick" class="hidden">
+          <label class="form-label">Fragen auswählen</label>
+          <div id="sessionQPickList" style="max-height:200px;overflow-y:auto;background:var(--bg-elevated);border:1px solid var(--border);border-radius:var(--radius);padding:8px"></div>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Reihenfolge</label>
+          <select class="form-select" id="sessionOrder">
+            <option value="shuffle">Zufällig mischen</option>
+            <option value="fixed">Feste Reihenfolge</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Beschreibung / Hinweis</label>
+          <textarea id="sessionDesc" class="form-textarea" placeholder="Optionaler Hinweis für Teilnehmer..." style="min-height:80px"></textarea>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-ghost" onclick="APP.closeModal('modalNewSession')">Abbrechen</button>
+        <button class="btn btn-primary" onclick="createSession()">Sitzung erstellen</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- New Question -->
+  <div class="modal-overlay" id="modalNewQuestion">
+    <div class="modal" style="max-width:720px">
+      <div class="modal-header">
+        <span class="modal-title" id="qModalTitle">Neue Frage</span>
+        <button class="modal-close" onclick="APP.closeModal('modalNewQuestion')">✕</button>
+      </div>
+      <div class="modal-body">
+        <div class="grid-2">
+          <div class="form-group">
+            <label class="form-label">Fragetyp</label>
+            <select class="form-select" id="qType" onchange="renderQTypeEditor()">
+              <option value="single_choice">Auswahlfrage (1 richtig)</option>
+              <option value="multiple_choice">Multiple Choice (mehrere richtig)</option>
+              <option value="freitext">Freitext</option>
+              <option value="zuordnung">Zuordnung</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Punkte</label>
+            <input type="number" id="qPoints" class="form-input" value="1" min="1" />
+          </div>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Frage</label>
+          <textarea id="qText" class="form-textarea" placeholder="Fragestellung eingeben..." style="min-height:80px;font-family:var(--font-display);font-size:15px"></textarea>
+        </div>
+        <div id="qTypeEditor"></div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-ghost" onclick="APP.closeModal('modalNewQuestion')">Abbrechen</button>
+        <button class="btn btn-primary" onclick="saveQuestion()">Speichern</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- New Material -->
+  <div class="modal-overlay" id="modalNewMaterial">
+    <div class="modal">
+      <div class="modal-header">
+        <span class="modal-title">Lernmaterial hinzufügen</span>
+        <button class="modal-close" onclick="APP.closeModal('modalNewMaterial')">✕</button>
+      </div>
+      <div class="modal-body">
+        <div class="form-group">
+          <label class="form-label">Titel</label>
+          <input type="text" id="matTitle" class="form-input" placeholder="z.B. §32 StGB – Notwehr" />
+        </div>
+        <div class="form-group">
+          <label class="form-label">Kategorie</label>
+          <input type="text" id="matCategory" class="form-input" placeholder="z.B. Strafrecht, Funktechnik, Interne Abläufe" />
+        </div>
+        <div class="form-group">
+          <label class="form-label">Inhalt</label>
+          <textarea id="matContent" class="form-textarea" placeholder="Gesetzestext, Definitionen, Codes, Abläufe..." style="min-height:200px"></textarea>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-ghost" onclick="APP.closeModal('modalNewMaterial')">Abbrechen</button>
+        <button class="btn btn-primary" onclick="saveMaterial()">Speichern</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- KI Import -->
+  <div class="modal-overlay" id="modalImportMaterial">
+    <div class="modal" style="max-width:720px">
+      <div class="modal-header">
+        <span class="modal-title">KI-Fraggenerierung</span>
+        <button class="modal-close" onclick="APP.closeModal('modalImportMaterial')">✕</button>
+      </div>
+      <div class="modal-body">
+        <div class="ai-panel mb-16">
+          <div class="ai-panel-title">KI-gestützte Fraggenerierung</div>
+          <div class="ai-panel-sub">Füge Material ein – die KI erstellt automatisch Fragen daraus</div>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Quelle wählen</label>
+          <select class="form-select" id="aiMaterialSource" onchange="onAiSourceChange()">
+            <option value="paste">Text einfügen</option>
+            <option value="saved">Gespeichertes Material</option>
+          </select>
+        </div>
+        <div id="aiPasteArea" class="form-group">
+          <label class="form-label">Material (Text einfügen)</label>
+          <textarea id="aiMaterialText" class="form-textarea" placeholder="Gesetzestexte, Funktabellen, Abläufe etc. hier einfügen..." style="min-height:160px"></textarea>
+        </div>
+        <div id="aiSavedArea" class="hidden form-group">
+          <label class="form-label">Gespeichertes Material</label>
+          <select class="form-select" id="aiSavedMat"></select>
+        </div>
+        <div class="grid-2">
+          <div class="form-group">
+            <label class="form-label">Anzahl Fragen</label>
+            <input type="number" id="aiCount" class="form-input" value="10" min="1" max="30" />
+          </div>
+          <div class="form-group">
+            <label class="form-label">Fragetypen</label>
+            <div style="display:flex;flex-direction:column;gap:6px;margin-top:4px">
+              <label style="display:flex;align-items:center;gap:8px;font-size:13px;color:var(--text-secondary)">
+                <input type="checkbox" id="aiTypeSC" checked style="accent-color:var(--accent)"> Auswahlfrage
+              </label>
+              <label style="display:flex;align-items:center;gap:8px;font-size:13px;color:var(--text-secondary)">
+                <input type="checkbox" id="aiTypeMC" checked style="accent-color:var(--accent)"> Multiple Choice
+              </label>
+              <label style="display:flex;align-items:center;gap:8px;font-size:13px;color:var(--text-secondary)">
+                <input type="checkbox" id="aiTypeFT" checked style="accent-color:var(--accent)"> Freitext
+              </label>
+              <label style="display:flex;align-items:center;gap:8px;font-size:13px;color:var(--text-secondary)">
+                <input type="checkbox" id="aiTypeZU" checked style="accent-color:var(--accent)"> Zuordnung
+              </label>
+            </div>
+          </div>
+        </div>
+        <div id="aiStatus" class="hidden" style="padding:12px;background:var(--bg-elevated);border-radius:var(--radius);margin-top:8px;font-family:var(--font-mono);font-size:12px;color:var(--accent)">
+          <span class="loading-spinner"></span> KI generiert Fragen...
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-ghost" onclick="APP.closeModal('modalImportMaterial')">Abbrechen</button>
+        <button class="btn btn-primary" id="aiGenerateBtn" onclick="generateWithAI()">Fragen generieren</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Result Detail -->
+  <div class="modal-overlay" id="modalResultDetail">
+    <div class="modal" style="max-width:720px">
+      <div class="modal-header">
+        <span class="modal-title" id="resultDetailTitle">Einreichung</span>
+        <button class="modal-close" onclick="APP.closeModal('modalResultDetail')">✕</button>
+      </div>
+      <div class="modal-body" id="resultDetailBody"></div>
+      <div class="modal-footer">
+        <button class="btn btn-ghost" onclick="APP.closeModal('modalResultDetail')">Schließen</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="toast-container" id="toastContainer"></div>
+  <footer class="app-footer">Made by Sora &nbsp;·&nbsp; Wissensabfragen v1.0</footer>
+
+  <script src="app.js"></script>
+  <script>
+  // ══ Auth Guard ══
+  if (!APP.isAdmin()) window.location.href = 'index.html';
+
+  // ══ Navigation ══
+  const VIEWS = ['dashboard','sessions','questions','materials','results','grading','settings'];
+  let currentView = 'dashboard';
+
+  function showView(name) {
+    VIEWS.forEach(v => {
+      document.getElementById('view' + v.charAt(0).toUpperCase() + v.slice(1)).classList.toggle('hidden', v !== name);
+    });
+    document.querySelectorAll('.nav-item').forEach((el, i) => {
+      el.classList.toggle('active', el.getAttribute('onclick')?.includes(`'${name}'`));
+    });
+    currentView = name;
+    if (name === 'dashboard') renderDashboard();
+    if (name === 'sessions') renderSessions();
+    if (name === 'questions') renderQuestions();
+    if (name === 'materials') renderMaterials();
+    if (name === 'results') renderResults();
+    if (name === 'grading') renderGrading();
+    if (name === 'settings') loadSettings();
+    updateBadges();
+  }
+
+  function updateBadges() {
+    const sessions = APP.get(APP.storageKeys.sessions);
+    const questions = APP.get(APP.storageKeys.questions);
+    const submissions = APP.get(APP.storageKeys.submissions);
+    const pending = submissions.filter(s => s.answers.some(a => a.score === null && a.type === 'freitext'));
+    document.getElementById('badgeSessions').textContent = sessions.length;
+    document.getElementById('badgeQuestions').textContent = questions.length;
+    document.getElementById('badgeResults').textContent = submissions.length;
+    document.getElementById('badgePending').textContent = pending.length;
+  }
+
+  // ══ Dashboard ══
+  function renderDashboard() {
+    const sessions = APP.get(APP.storageKeys.sessions);
+    const questions = APP.get(APP.storageKeys.questions);
+    const submissions = APP.get(APP.storageKeys.submissions);
+    const active = sessions.filter(s => s.status === 'active');
+    const pending = submissions.filter(s => s.answers.some(a => a.score === null && a.type === 'freitext'));
+
+    document.getElementById('dashSubtitle').textContent = APP.formatDate(APP.now());
+    document.getElementById('statsGrid').innerHTML = `
+      <div class="stat-card"><div class="stat-label">Sitzungen gesamt</div><div class="stat-value">${sessions.length}</div></div>
+      <div class="stat-card green"><div class="stat-label">Aktiv</div><div class="stat-value">${active.length}</div></div>
+      <div class="stat-card"><div class="stat-label">Fragen</div><div class="stat-value">${questions.length}</div></div>
+      <div class="stat-card amber"><div class="stat-label">Einreichungen</div><div class="stat-value">${submissions.length}</div></div>
+      <div class="stat-card red"><div class="stat-label">Offene Bewertungen</div><div class="stat-value">${pending.length}</div></div>
+    `;
+
+    const actEl = document.getElementById('dashActiveSessions');
+    if (!active.length) {
+      actEl.innerHTML = '<div class="text-muted text-sm" style="padding:16px 0">Keine aktiven Sitzungen</div>';
+    } else {
+      actEl.innerHTML = active.map(s => `
+        <div style="display:flex;align-items:center;justify-content:space-between;padding:10px 0;border-bottom:1px solid var(--border)">
+          <div>
+            <div style="font-weight:600;font-size:14px">${s.name}</div>
+            <div class="text-xs font-mono text-muted">${s.code}</div>
+          </div>
+          <div class="flex gap-8">
+            <span class="badge badge-active">Aktiv</span>
+            <button class="btn btn-sm btn-ghost" onclick="toggleSession('${s.id}')">Beenden</button>
+          </div>
+        </div>`).join('');
+    }
+
+    const pendEl = document.getElementById('dashPending');
+    if (!pending.length) {
+      pendEl.innerHTML = '<div class="text-muted text-sm" style="padding:16px 0">Alle Antworten bewertet ✓</div>';
+    } else {
+      pendEl.innerHTML = pending.slice(0,5).map(s => `
+        <div style="display:flex;align-items:center;justify-content:space-between;padding:10px 0;border-bottom:1px solid var(--border)">
+          <div>
+            <div style="font-weight:600;font-size:14px">${s.participantName}</div>
+            <div class="text-xs text-muted">${getSessionName(s.sessionId)}</div>
+          </div>
+          <button class="btn btn-sm btn-ghost" onclick="showView('grading')">Bewerten</button>
+        </div>`).join('');
+    }
+  }
+
+  // ══ Sessions ══
+  function renderSessions() {
+    const sessions = APP.get(APP.storageKeys.sessions);
+    const tbody = document.getElementById('sessionsTable');
+    const empty = document.getElementById('sessionsEmpty');
+    if (!sessions.length) { tbody.innerHTML = ''; empty.classList.remove('hidden'); return; }
+    empty.classList.add('hidden');
+    const submissions = APP.get(APP.storageKeys.submissions);
+    tbody.innerHTML = sessions.map(s => {
+      const subs = submissions.filter(sb => sb.sessionId === s.id).length;
+      const badgeClass = s.status === 'active' ? 'badge-active' : s.status === 'draft' ? 'badge-draft' : 'badge-closed';
+      const badgeLabel = s.status === 'active' ? 'Aktiv' : s.status === 'draft' ? 'Entwurf' : 'Geschlossen';
+      return `<tr>
+        <td style="font-weight:600;color:var(--text-primary)">${s.name}</td>
+        <td><span class="font-mono text-accent" style="font-size:12px">${s.code}</span></td>
+        <td>${APP.formatShortDate(s.date)}</td>
+        <td>${s.questionIds?.length || 0}</td>
+        <td><span class="badge ${badgeClass}">${badgeLabel}</span></td>
+        <td>${subs}</td>
+        <td>
+          <div class="flex gap-8">
+            ${s.status !== 'active' ? `<button class="btn btn-sm btn-ghost" onclick="toggleSession('${s.id}')">Aktivieren</button>` : ''}
+            ${s.status === 'active' ? `<button class="btn btn-sm btn-ghost" onclick="toggleSession('${s.id}')">Beenden</button>` : ''}
+            <button class="btn btn-sm btn-danger" onclick="deleteSession('${s.id}')">Löschen</button>
+          </div>
+        </td>
+      </tr>`;
+    }).join('');
+  }
+
+  function generateCode() {
+    const now = new Date();
+    return `SZ-${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}${String(Math.floor(Math.random()*900)+100)}`;
+  }
+
+  function getSessionName(id) {
+    const sessions = APP.get(APP.storageKeys.sessions);
+    return sessions.find(s => s.id === id)?.name || 'Unbekannte Sitzung';
+  }
+
+  // Populate question picker
+  document.getElementById('sessionQMode').addEventListener('change', function() {
+    document.getElementById('sessionQCount').classList.toggle('hidden', this.value !== 'random');
+    document.getElementById('sessionQPick').classList.toggle('hidden', this.value !== 'pick');
+    if (this.value === 'pick') {
+      const qs = APP.get(APP.storageKeys.questions);
+      document.getElementById('sessionQPickList').innerHTML = qs.length
+        ? qs.map(q => `<label style="display:flex;align-items:flex-start;gap:8px;padding:6px;cursor:pointer;font-size:13px">
+            <input type="checkbox" value="${q.id}" style="accent-color:var(--accent);margin-top:3px">
+            <span>${q.text.slice(0,80)}${q.text.length>80?'...':''}</span>
+          </label>`).join('')
+        : '<div class="text-muted text-sm">Keine Fragen im Katalog</div>';
+    }
+  });
+
+  function createSession() {
+    const name = document.getElementById('sessionName').value.trim();
+    const date = document.getElementById('sessionDate').value;
+    const timer = parseInt(document.getElementById('sessionTimer').value) || 0;
+    const qMode = document.getElementById('sessionQMode').value;
+    const order = document.getElementById('sessionOrder').value;
+    const desc = document.getElementById('sessionDesc').value.trim();
+    if (!name) { APP.toast('Name erforderlich', 'error'); return; }
+
+    const allQs = APP.get(APP.storageKeys.questions);
+    let questionIds = [];
+    if (qMode === 'all') questionIds = allQs.map(q => q.id);
+    else if (qMode === 'random') {
+      const count = parseInt(document.getElementById('sessionQCountVal').value) || 20;
+      questionIds = APP.shuffle(allQs).slice(0, count).map(q => q.id);
+    } else {
+      questionIds = [...document.querySelectorAll('#sessionQPickList input:checked')].map(el => el.value);
+    }
+
+    if (!questionIds.length) { APP.toast('Keine Fragen ausgewählt', 'error'); return; }
+
+    const session = {
+      id: APP.uid(),
+      name, date, timer, desc, order,
+      questionIds,
+      code: generateCode(),
+      status: 'draft',
+      createdAt: APP.now(),
+    };
+
+    const sessions = APP.get(APP.storageKeys.sessions);
+    sessions.push(session);
+    APP.set(APP.storageKeys.sessions, sessions);
+    APP.closeModal('modalNewSession');
+    APP.toast(`Sitzung "${name}" erstellt | Code: ${session.code}`, 'success');
+    document.getElementById('sessionName').value = '';
+    renderSessions();
+    updateBadges();
+  }
+
+  function toggleSession(id) {
+    const sessions = APP.get(APP.storageKeys.sessions);
+    const s = sessions.find(x => x.id === id);
+    if (!s) return;
+    s.status = s.status === 'active' ? 'closed' : 'active';
+    APP.set(APP.storageKeys.sessions, sessions);
+    renderSessions();
+    renderDashboard();
+    updateBadges();
+    APP.toast(`Sitzung ${s.status === 'active' ? 'aktiviert' : 'geschlossen'}`, 'success');
+  }
+
+  function deleteSession(id) {
+    if (!confirm('Sitzung und alle Einreichungen löschen?')) return;
+    const sessions = APP.get(APP.storageKeys.sessions).filter(s => s.id !== id);
+    APP.set(APP.storageKeys.sessions, sessions);
+    const submissions = APP.get(APP.storageKeys.submissions).filter(s => s.sessionId !== id);
+    APP.set(APP.storageKeys.submissions, submissions);
+    renderSessions(); updateBadges();
+    APP.toast('Gelöscht', 'success');
+  }
+
+  // ══ Questions ══
+  let editingQId = null;
+  let mcOptions = [];
+  let zuPairs = [];
+
+  function openNewQuestion() {
+    editingQId = null;
+    document.getElementById('qModalTitle').textContent = 'Neue Frage';
+    document.getElementById('qText').value = '';
+    document.getElementById('qPoints').value = '1';
+    document.getElementById('qType').value = 'single_choice';
+    mcOptions = [{id:'a',text:'',correct:true},{id:'b',text:'',correct:false},{id:'c',text:'',correct:false},{id:'d',text:'',correct:false}];
+    zuPairs = [{left:'',right:''},{left:'',right:''}];
+    renderQTypeEditor();
+    APP.openModal('modalNewQuestion');
+  }
+
+  function editQuestion(id) {
+    const qs = APP.get(APP.storageKeys.questions);
+    const q = qs.find(x => x.id === id);
+    if (!q) return;
+    editingQId = id;
+    document.getElementById('qModalTitle').textContent = 'Frage bearbeiten';
+    document.getElementById('qText').value = q.text;
+    document.getElementById('qPoints').value = q.points;
+    document.getElementById('qType').value = q.type;
+    if (q.options) mcOptions = q.options.map(o => ({...o}));
+    else mcOptions = [{id:'a',text:'',correct:true},{id:'b',text:'',correct:false},{id:'c',text:'',correct:false}];
+    if (q.pairs) zuPairs = q.pairs.map(p => ({...p}));
+    else zuPairs = [{left:'',right:''},{left:'',right:''}];
+    renderQTypeEditor();
+    APP.openModal('modalNewQuestion');
+  }
+
+  function renderQTypeEditor() {
+    const type = document.getElementById('qType').value;
+    const el = document.getElementById('qTypeEditor');
+    if (type === 'single_choice' || type === 'multiple_choice') {
+      const isMulti = type === 'multiple_choice';
+      el.innerHTML = `
+        <div class="form-label" style="margin-bottom:8px">Antwortoptionen ${isMulti ? '(mehrere richtig möglich)' : '(genau eine richtig)'}</div>
+        <div id="optionsList">
+          ${mcOptions.map((o, i) => `
+            <div class="mc-option ${o.correct ? 'correct' : ''}" id="opt_${i}">
+              <input type="${isMulti ? 'checkbox' : 'radio'}" name="correctOpt" ${o.correct ? 'checked' : ''} onchange="setCorrect(${i}, ${isMulti})" style="accent-color:var(--accent)">
+              <input type="text" value="${o.text}" placeholder="Option ${o.id.toUpperCase()}" class="form-input" style="flex:1" oninput="mcOptions[${i}].text=this.value">
+              <button class="btn btn-sm btn-danger" onclick="removeOption(${i})" ${mcOptions.length<=2?'disabled':''}>✕</button>
+            </div>`).join('')}
+        </div>
+        <button class="btn btn-ghost btn-sm mt-8" onclick="addOption()">+ Option hinzufügen</button>
+      `;
+    } else if (type === 'freitext') {
+      el.innerHTML = `
+        <div class="form-group">
+          <label class="form-label">Musterlösung (für Bewerter)</label>
+          <textarea id="qSample" class="form-textarea" placeholder="Erwartete Antwort oder Schlüsselbegriffe..." style="min-height:80px">${editingQId ? (APP.get(APP.storageKeys.questions).find(q=>q.id===editingQId)?.sampleAnswer||'') : ''}</textarea>
+        </div>`;
+    } else if (type === 'zuordnung') {
+      el.innerHTML = `
+        <div class="form-label" style="margin-bottom:8px">Zuordnungspaare</div>
+        <div class="zuordnung-grid" style="grid-template-columns:1fr auto 1fr;gap:8px;align-items:center">
+          <div class="form-label" style="margin:0">Begriff / Links</div>
+          <div></div>
+          <div class="form-label" style="margin:0">Definition / Rechts</div>
+        </div>
+        <div id="pairsList">
+          ${zuPairs.map((p, i) => `
+            <div style="display:grid;grid-template-columns:1fr auto 1fr auto;gap:8px;align-items:center;margin-bottom:8px">
+              <input type="text" value="${p.left}" placeholder="Begriff ${i+1}" class="form-input" oninput="zuPairs[${i}].left=this.value">
+              <span style="color:var(--text-muted)">⇌</span>
+              <input type="text" value="${p.right}" placeholder="Definition ${i+1}" class="form-input" oninput="zuPairs[${i}].right=this.value">
+              <button class="btn btn-sm btn-danger" onclick="removePair(${i})" ${zuPairs.length<=2?'disabled':''}>✕</button>
+            </div>`).join('')}
+        </div>
+        <button class="btn btn-ghost btn-sm" onclick="addPair()">+ Paar hinzufügen</button>
+      `;
+    }
+  }
+
+  function setCorrect(idx, isMulti) {
+    if (!isMulti) mcOptions.forEach((o, i) => o.correct = i === idx);
+    else mcOptions[idx].correct = !mcOptions[idx].correct;
+    renderQTypeEditor();
+  }
+
+  function addOption() {
+    const letters = 'abcdefghijklmnopqrstuvwxyz';
+    mcOptions.push({id: letters[mcOptions.length] || mcOptions.length, text:'', correct:false});
+    renderQTypeEditor();
+  }
+
+  function removeOption(i) {
+    if (mcOptions.length <= 2) return;
+    mcOptions.splice(i, 1);
+    renderQTypeEditor();
+  }
+
+  function addPair() { zuPairs.push({left:'',right:''}); renderQTypeEditor(); }
+  function removePair(i) { if(zuPairs.length<=2)return; zuPairs.splice(i,1); renderQTypeEditor(); }
+
+  function saveQuestion() {
+    const type = document.getElementById('qType').value;
+    const text = document.getElementById('qText').value.trim();
+    const points = parseInt(document.getElementById('qPoints').value) || 1;
+    if (!text) { APP.toast('Fragetext erforderlich', 'error'); return; }
+
+    const q = { id: editingQId || APP.uid(), type, text, points, createdAt: APP.now() };
+
+    if (type === 'single_choice' || type === 'multiple_choice') {
+      if (mcOptions.some(o => !o.text.trim())) { APP.toast('Alle Optionen ausfüllen', 'error'); return; }
+      if (!mcOptions.some(o => o.correct)) { APP.toast('Mindestens eine richtige Antwort markieren', 'error'); return; }
+      q.options = mcOptions;
+    } else if (type === 'freitext') {
+      q.sampleAnswer = document.getElementById('qSample').value.trim();
+    } else if (type === 'zuordnung') {
+      if (zuPairs.some(p => !p.left.trim() || !p.right.trim())) { APP.toast('Alle Paare ausfüllen', 'error'); return; }
+      q.pairs = zuPairs;
+    }
+
+    const qs = APP.get(APP.storageKeys.questions);
+    if (editingQId) {
+      const idx = qs.findIndex(x => x.id === editingQId);
+      if (idx >= 0) qs[idx] = q;
+    } else {
+      qs.push(q);
+    }
+    APP.set(APP.storageKeys.questions, qs);
+    APP.closeModal('modalNewQuestion');
+    APP.toast('Frage gespeichert', 'success');
+    renderQuestions(); updateBadges();
+  }
+
+  function deleteQuestion(id) {
+    if (!confirm('Frage löschen?')) return;
+    const qs = APP.get(APP.storageKeys.questions).filter(q => q.id !== id);
+    APP.set(APP.storageKeys.questions, qs);
+    renderQuestions(); updateBadges();
+    APP.toast('Gelöscht', 'success');
+  }
+
+  function renderQuestions() {
+    const search = document.getElementById('qSearch').value.toLowerCase();
+    const filter = document.getElementById('qTypeFilter').value;
+    let qs = APP.get(APP.storageKeys.questions);
+    if (filter) qs = qs.filter(q => q.type === filter);
+    if (search) qs = qs.filter(q => q.text.toLowerCase().includes(search));
+    const el = document.getElementById('questionsList');
+    const empty = document.getElementById('questionsEmpty');
+    if (!qs.length) { el.innerHTML=''; empty.classList.remove('hidden'); return; }
+    empty.classList.add('hidden');
+    el.innerHTML = qs.map(q => {
+      const typeInfo = Q_TYPES[q.type];
+      let preview = '';
+      if (q.options) preview = `<div style="margin-top:10px;display:flex;flex-wrap:wrap;gap:6px">${q.options.map(o => `<span style="padding:3px 10px;border-radius:2px;font-size:12px;background:var(--bg-card);border:1px solid ${o.correct?'var(--accent-green)':'var(--border)'};color:${o.correct?'var(--accent-green)':'var(--text-muted)'}">${o.text}</span>`).join('')}</div>`;
+      if (q.sampleAnswer) preview = `<div style="margin-top:8px;font-size:12px;color:var(--text-muted);font-family:var(--font-mono)">↳ ${q.sampleAnswer.slice(0,80)}...</div>`;
+      if (q.pairs) preview = `<div style="margin-top:8px;font-size:12px;color:var(--text-muted)">${q.pairs.map(p=>`${p.left} ⇌ ${p.right}`).join(' · ')}</div>`;
+      return `<div class="question-block">
+        <div class="question-number">F-${q.id.slice(-4).toUpperCase()}</div>
+        <div class="flex items-center justify-between mt-4">
+          <div class="question-type-tag">${typeInfo.icon} ${typeInfo.label}</div>
+          <div class="flex gap-8">
+            <span class="badge badge-draft">${q.points} Pkt.</span>
+            <button class="btn btn-sm btn-ghost" onclick="editQuestion('${q.id}')">Bearbeiten</button>
+            <button class="btn btn-sm btn-danger" onclick="deleteQuestion('${q.id}')">Löschen</button>
+          </div>
+        </div>
+        <div style="font-size:15px;font-weight:500;margin-top:8px;line-height:1.4">${q.text}</div>
+        ${preview}
+      </div>`;
+    }).join('');
+  }
+
+  // ══ Materials ══
+  function saveMaterial() {
+    const title = document.getElementById('matTitle').value.trim();
+    const category = document.getElementById('matCategory').value.trim();
+    const content = document.getElementById('matContent').value.trim();
+    if (!title || !content) { APP.toast('Titel und Inhalt erforderlich', 'error'); return; }
+    const mats = APP.get(APP.storageKeys.materials);
+    mats.push({ id: APP.uid(), title, category, content, createdAt: APP.now() });
+    APP.set(APP.storageKeys.materials, mats);
+    APP.closeModal('modalNewMaterial');
+    document.getElementById('matTitle').value='';
+    document.getElementById('matCategory').value='';
+    document.getElementById('matContent').value='';
+    APP.toast('Material gespeichert', 'success');
+    renderMaterials();
+  }
+
+  function renderMaterials() {
+    const mats = APP.get(APP.storageKeys.materials);
+    const el = document.getElementById('materialsList');
+    const empty = document.getElementById('materialsEmpty');
+    if (!mats.length) { el.innerHTML=''; empty.classList.remove('hidden'); return; }
+    empty.classList.add('hidden');
+    el.innerHTML = mats.map(m => `
+      <div class="card">
+        <div class="card-header">
+          <div>
+            <div style="font-weight:700;font-size:15px">${m.title}</div>
+            ${m.category ? `<div class="text-xs font-mono text-accent mt-4">${m.category}</div>` : ''}
+          </div>
+          <button class="btn btn-sm btn-danger" onclick="deleteMaterial('${m.id}')">✕</button>
+        </div>
+        <div style="font-family:var(--font-mono);font-size:12px;color:var(--text-secondary);line-height:1.7;max-height:100px;overflow:hidden;position:relative">
+          ${m.content.slice(0,300)}...
+          <div style="position:absolute;bottom:0;left:0;right:0;height:40px;background:linear-gradient(transparent,var(--bg-card))"></div>
+        </div>
+        <div class="flex gap-8 mt-16">
+          <button class="btn btn-ghost btn-sm" onclick="generateFromMaterial('${m.id}')">KI-Fragen generieren</button>
+          <span class="text-xs text-muted" style="margin-left:auto;line-height:32px">${APP.formatShortDate(m.createdAt)}</span>
+        </div>
+      </div>`).join('');
+  }
+
+  function deleteMaterial(id) {
+    if (!confirm('Material löschen?')) return;
+    APP.set(APP.storageKeys.materials, APP.get(APP.storageKeys.materials).filter(m => m.id !== id));
+    renderMaterials();
+    APP.toast('Gelöscht', 'success');
+  }
+
+  function generateFromMaterial(id) {
+    const mat = APP.get(APP.storageKeys.materials).find(m => m.id === id);
+    if (!mat) return;
+    document.getElementById('aiMaterialSource').value = 'saved';
+    onAiSourceChange();
+    const sel = document.getElementById('aiSavedMat');
+    sel.value = id;
+    APP.openModal('modalImportMaterial');
+  }
+
+  // ══ AI Generation ══
+  function onAiSourceChange() {
+    const val = document.getElementById('aiMaterialSource').value;
+    document.getElementById('aiPasteArea').classList.toggle('hidden', val !== 'paste');
+    document.getElementById('aiSavedArea').classList.toggle('hidden', val !== 'saved');
+    if (val === 'saved') {
+      const mats = APP.get(APP.storageKeys.materials);
+      document.getElementById('aiSavedMat').innerHTML = mats.length
+        ? mats.map(m => `<option value="${m.id}">${m.title}</option>`).join('')
+        : '<option value="">Kein Material vorhanden</option>';
+    }
+  }
+
+  async function generateWithAI() {
+    const apiKey = localStorage.getItem('wa_api_key');
+    if (!apiKey) { APP.toast('API-Key in Einstellungen hinterlegen', 'error'); return; }
+
+    const source = document.getElementById('aiMaterialSource').value;
+    let material = '';
+    if (source === 'paste') {
+      material = document.getElementById('aiMaterialText').value.trim();
+    } else {
+      const id = document.getElementById('aiSavedMat').value;
+      material = APP.get(APP.storageKeys.materials).find(m => m.id === id)?.content || '';
+    }
+    if (!material) { APP.toast('Material eingeben', 'error'); return; }
+
+    const count = parseInt(document.getElementById('aiCount').value) || 10;
+    const types = [];
+    if (document.getElementById('aiTypeSC').checked) types.push('single_choice');
+    if (document.getElementById('aiTypeMC').checked) types.push('multiple_choice');
+    if (document.getElementById('aiTypeFT').checked) types.push('freitext');
+    if (document.getElementById('aiTypeZU').checked) types.push('zuordnung');
+    if (!types.length) { APP.toast('Mindestens einen Fragetyp wählen', 'error'); return; }
+
+    document.getElementById('aiStatus').classList.remove('hidden');
+    document.getElementById('aiGenerateBtn').disabled = true;
+
+    try {
+      const questions = await AI.generateQuestions(material, count, types, apiKey);
+      const qs = APP.get(APP.storageKeys.questions);
+      qs.push(...questions);
+      APP.set(APP.storageKeys.questions, qs);
+      APP.closeModal('modalImportMaterial');
+      APP.toast(`${questions.length} Fragen generiert und gespeichert`, 'success');
+      renderQuestions(); updateBadges();
+    } catch(e) {
+      APP.toast('KI-Fehler: ' + e.message, 'error');
+    } finally {
+      document.getElementById('aiStatus').classList.add('hidden');
+      document.getElementById('aiGenerateBtn').disabled = false;
+    }
+  }
+
+  // ══ Results ══
+  function renderResults() {
+    const sessions = APP.get(APP.storageKeys.sessions);
+    const submissions = APP.get(APP.storageKeys.submissions);
+    const sel = document.getElementById('resultsSessionFilter');
+    const currentFilter = sel.value;
+    sel.innerHTML = '<option value="">Alle Sitzungen</option>' +
+      sessions.map(s => `<option value="${s.id}" ${s.id===currentFilter?'selected':''}>${s.name}</option>`).join('');
+
+    let subs = submissions;
+    if (currentFilter) subs = subs.filter(s => s.sessionId === currentFilter);
+
+    const el = document.getElementById('resultsList');
+    const empty = document.getElementById('resultsEmpty');
+    if (!subs.length) { el.innerHTML=''; empty.classList.remove('hidden'); return; }
+    empty.classList.add('hidden');
+
+    el.innerHTML = `<div class="card"><div class="table-wrap"><table>
+      <thead><tr><th>Teilnehmer</th><th>Sitzung</th><th>Eingereicht</th><th>Punkte</th><th>Ergebnis</th><th>Status</th><th></th></tr></thead>
+      <tbody>${subs.map(s => {
+        const maxPts = s.answers.reduce((a,x) => a + (x.maxScore||0), 0);
+        const gotPts = s.answers.reduce((a,x) => a + (x.score||0), 0);
+        const pct = maxPts ? Math.round((gotPts/maxPts)*100) : 0;
+        const hasPending = s.answers.some(a => a.score === null && a.type === 'freitext');
+        const statusBadge = hasPending
+          ? '<span class="badge badge-pending">Ausstehend</span>'
+          : `<span class="badge badge-active">${APP.scoreLabel(pct)}</span>`;
+        return `<tr>
+          <td style="font-weight:600;color:var(--text-primary)">${s.participantName}</td>
+          <td>${getSessionName(s.sessionId)}</td>
+          <td>${APP.formatDate(s.submittedAt)}</td>
+          <td class="font-mono">${gotPts}/${maxPts}</td>
+          <td style="color:${APP.scoreColor(pct)};font-weight:700">${pct}%</td>
+          <td>${statusBadge}</td>
+          <td><button class="btn btn-sm btn-ghost" onclick="showResultDetail('${s.id}')">Details</button></td>
+        </tr>`;
+      }).join('')}</tbody>
+    </table></div></div>`;
+  }
+
+  function showResultDetail(id) {
+    const subs = APP.get(APP.storageKeys.submissions);
+    const s = subs.find(x => x.id === id);
+    if (!s) return;
+    const qs = APP.get(APP.storageKeys.questions);
+    document.getElementById('resultDetailTitle').textContent = `${s.participantName} · ${APP.formatDate(s.submittedAt)}`;
+    document.getElementById('resultDetailBody').innerHTML = s.answers.map(a => {
+      const q = qs.find(x => x.id === a.questionId);
+      if (!q) return '';
+      const isPending = a.score === null && q.type === 'freitext';
+      const scoreColor = a.score === null ? 'var(--accent-amber)' : a.score >= a.maxScore ? 'var(--accent-green)' : 'var(--accent-red)';
+      return `<div class="answer-review ${isPending ? 'pending' : a.score >= a.maxScore ? 'correct' : 'wrong'}">
+        <div class="flex justify-between mb-8">
+          <div class="question-type-tag">${Q_TYPES[q.type]?.icon} ${Q_TYPES[q.type]?.label}</div>
+          <div style="font-family:var(--font-mono);font-size:12px;color:${scoreColor}">${isPending ? 'Ausstehend' : `${a.score}/${a.maxScore} Pkt.`}</div>
+        </div>
+        <div style="font-weight:600;margin-bottom:8px">${q.text}</div>
+        <div style="font-size:13px;color:var(--text-secondary)">
+          <span class="text-muted font-mono">Antwort:</span> ${Array.isArray(a.answer) ? a.answer.join(', ') : (typeof a.answer === 'object' ? JSON.stringify(a.answer) : a.answer || '—')}
+        </div>
+        ${q.sampleAnswer ? `<div style="font-size:12px;color:var(--text-muted);margin-top:6px;font-family:var(--font-mono)">Musterlösung: ${q.sampleAnswer}</div>` : ''}
+      </div>`;
+    }).join('');
+    APP.openModal('modalResultDetail');
+  }
+
+  // ══ Grading ══
+  function renderGrading() {
+    const subs = APP.get(APP.storageKeys.submissions);
+    const qs = APP.get(APP.storageKeys.questions);
+    const el = document.getElementById('gradingList');
+    const empty = document.getElementById('gradingEmpty');
+
+    const pending = [];
+    subs.forEach(s => {
+      s.answers.forEach((a, ai) => {
+        if (a.type === 'freitext' && a.score === null) {
+          const q = qs.find(x => x.id === a.questionId);
+          if (q) pending.push({ sub: s, answer: a, answerIdx: ai, question: q });
+        }
+      });
+    });
+
+    if (!pending.length) { el.innerHTML=''; empty.classList.remove('hidden'); return; }
+    empty.classList.add('hidden');
+
+    el.innerHTML = pending.map(({sub, answer, answerIdx, question}) => `
+      <div class="card mb-16">
+        <div class="flex justify-between mb-12">
+          <div>
+            <div style="font-weight:700">${sub.participantName}</div>
+            <div class="text-xs text-muted">${getSessionName(sub.sessionId)} · ${APP.formatDate(sub.submittedAt)}</div>
+          </div>
+          <div class="badge badge-pending">Offen</div>
+        </div>
+        <div class="question-type-tag mb-8">✎ Freitext · ${question.points} Punkte max.</div>
+        <div style="font-weight:600;font-size:15px;margin-bottom:12px">${question.text}</div>
+        <div style="background:var(--bg-elevated);border:1px solid var(--border);border-radius:var(--radius);padding:14px;margin-bottom:12px;font-size:14px;line-height:1.6">
+          ${answer.answer || '<em style="color:var(--text-muted)">Keine Antwort</em>'}
+        </div>
+        ${question.sampleAnswer ? `<div style="font-size:12px;color:var(--accent-dim);margin-bottom:16px;font-family:var(--font-mono)">Musterlösung: ${question.sampleAnswer}</div>` : ''}
+        <div class="flex gap-8 items-center">
+          <label class="form-label" style="margin:0;white-space:nowrap">Punkte (0–${question.points}):</label>
+          <input type="number" id="score_${sub.id}_${answerIdx}" class="form-input" style="width:80px" value="0" min="0" max="${question.points}" />
+          <button class="btn btn-success btn-sm" onclick="submitGrade('${sub.id}',${answerIdx},${question.points})">Bestätigen</button>
+          <button class="btn btn-ghost btn-sm" onclick="submitGrade('${sub.id}',${answerIdx},${question.points},0)">Nicht akzeptiert</button>
+        </div>
+      </div>`).join('');
+  }
+
+  function submitGrade(subId, answerIdx, maxPts, forceScore) {
+    const score = forceScore !== undefined ? forceScore : parseInt(document.getElementById(`score_${subId}_${answerIdx}`).value) || 0;
+    const subs = APP.get(APP.storageKeys.submissions);
+    const sub = subs.find(s => s.id === subId);
+    if (!sub) return;
+    sub.answers[answerIdx].score = Math.min(score, maxPts);
+    APP.set(APP.storageKeys.submissions, subs);
+    APP.toast(`Bewertet: ${score} Punkte`, 'success');
+    renderGrading(); updateBadges();
+  }
+
+  // ══ Settings ══
+  function loadSettings() {
+    const apiKey = localStorage.getItem('wa_api_key') || '';
+    document.getElementById('apiKeyInput').value = apiKey ? '••••••••••••' : '';
+  }
+
+  function changePin() {
+    const old = document.getElementById('oldPin').value;
+    const nw = document.getElementById('newPin').value;
+    const stored = localStorage.getItem(APP.storageKeys.adminPin) || '1234';
+    if (old !== stored) { APP.toast('Aktueller PIN falsch', 'error'); return; }
+    if (nw.length < 4) { APP.toast('PIN mindestens 4 Zeichen', 'error'); return; }
+    localStorage.setItem(APP.storageKeys.adminPin, nw);
+    APP.toast('PIN geändert', 'success');
+    document.getElementById('oldPin').value = '';
+    document.getElementById('newPin').value = '';
+  }
+
+  function saveApiKey() {
+    const key = document.getElementById('apiKeyInput').value.trim();
+    if (!key || key.startsWith('•')) { APP.toast('Gültigen Key eingeben', 'error'); return; }
+    localStorage.setItem('wa_api_key', key);
+    APP.toast('API-Key gespeichert', 'success');
+    document.getElementById('apiKeyInput').value = '••••••••••••';
+  }
+
+  function exportData() {
+    const data = {
+      sessions: APP.get(APP.storageKeys.sessions),
+      questions: APP.get(APP.storageKeys.questions),
+      submissions: APP.get(APP.storageKeys.submissions),
+      materials: APP.get(APP.storageKeys.materials),
+      exportedAt: APP.now(),
+      version: '1.0.0',
+    };
+    const blob = new Blob([JSON.stringify(data, null, 2)], {type:'application/json'});
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = `wissensabfragen_backup_${new Date().toISOString().slice(0,10)}.json`;
+    a.click();
+  }
+
+  function importData(event) {
+    const file = event.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = e => {
+      try {
+        const data = JSON.parse(e.target.result);
+        if (data.sessions) APP.set(APP.storageKeys.sessions, data.sessions);
+        if (data.questions) APP.set(APP.storageKeys.questions, data.questions);
+        if (data.submissions) APP.set(APP.storageKeys.submissions, data.submissions);
+        if (data.materials) APP.set(APP.storageKeys.materials, data.materials);
+        APP.toast('Import erfolgreich', 'success');
+        updateBadges();
+      } catch { APP.toast('Ungültige Datei', 'error'); }
+    };
+    reader.readAsText(file);
+  }
+
+  function clearAllData() {
+    if (!confirm('ALLE Daten unwiderruflich löschen?\nDies kann nicht rückgängig gemacht werden.')) return;
+    Object.values(APP.storageKeys).forEach(k => localStorage.removeItem(k));
+    APP.toast('Alle Daten gelöscht', 'success');
+    updateBadges();
+  }
+
+  function adminLogout() { APP.adminLogout(); window.location.href = 'index.html'; }
+
+  // ══ Init ══
+  updateBadges();
+  renderDashboard();
+  </script>
+</body>
+</html>

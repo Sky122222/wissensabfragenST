@@ -1,0 +1,417 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Wissensabfragen – Prüfung</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <!-- LOADING STATE -->
+  <div id="loadingState" style="min-height:100vh;display:flex;align-items:center;justify-content:center;position:relative;z-index:1">
+    <div style="text-align:center">
+      <div class="loading-spinner" style="width:32px;height:32px;border-width:3px;margin:0 auto 16px"></div>
+      <div class="font-mono text-muted" style="font-size:12px;letter-spacing:2px">LADE SITZUNG...</div>
+    </div>
+  </div>
+
+  <!-- INTRO STATE -->
+  <div id="introState" class="hidden" style="min-height:100vh;display:flex;align-items:center;justify-content:center;padding:24px;position:relative;z-index:1">
+    <div style="max-width:560px;width:100%">
+      <div style="text-align:center;margin-bottom:32px">
+        <div class="login-hex" style="margin:0 auto 16px">W</div>
+        <div class="login-title" id="introTitle">Wissensabfragen</div>
+        <div class="login-subtitle" id="introSubtitle">Prüfung wird geladen...</div>
+      </div>
+      <div class="card mb-24">
+        <div class="flex justify-between mb-16">
+          <div>
+            <div class="page-label">Teilnehmer</div>
+            <div style="font-size:18px;font-weight:700" id="introName">—</div>
+          </div>
+          <div style="text-align:right">
+            <div class="page-label">Fragen</div>
+            <div style="font-size:18px;font-weight:700" id="introQCount">—</div>
+          </div>
+        </div>
+        <div class="flex justify-between">
+          <div>
+            <div class="page-label">Zeitlimit</div>
+            <div class="font-mono text-accent" id="introTimer">—</div>
+          </div>
+          <div>
+            <div class="page-label">Code</div>
+            <div class="font-mono text-accent" id="introCode">—</div>
+          </div>
+        </div>
+        <div id="introDesc" class="mt-16" style="font-size:14px;color:var(--text-secondary);padding:12px;background:var(--bg-elevated);border-radius:var(--radius);border:1px solid var(--border)"></div>
+      </div>
+      <div style="background:rgba(255,184,48,0.08);border:1px solid rgba(255,184,48,0.2);border-radius:var(--radius);padding:14px;margin-bottom:24px;font-size:13px;color:var(--accent-amber)">
+        ⚠ Lies alle Fragen sorgfältig. Deine Antworten werden gespeichert, sobald du die Prüfung einreichst.
+      </div>
+      <button class="btn btn-primary btn-lg w-full" onclick="startExam()" style="justify-content:center">
+        Prüfung starten →
+      </button>
+    </div>
+  </div>
+
+  <!-- EXAM STATE -->
+  <div id="examState" class="hidden exam-shell">
+    <div class="exam-header">
+      <div>
+        <div style="font-weight:700;font-size:15px" id="examSessionName">Wissensabfragen</div>
+        <div class="text-xs font-mono text-muted" id="examParticipantName">—</div>
+      </div>
+      <div class="exam-timer" id="examTimer">--:--</div>
+      <div style="text-align:right">
+        <div class="text-xs font-mono text-muted">Frage</div>
+        <div style="font-weight:700;font-size:15px"><span id="examCurrent">1</span>/<span id="examTotal">—</span></div>
+      </div>
+    </div>
+    <div class="exam-progress-bar" style="margin:0 24px">
+      <div class="exam-progress-fill" id="examProgressBar" style="width:0%"></div>
+    </div>
+
+    <div class="exam-body" id="examBody"></div>
+
+    <div style="padding:16px 24px;border-top:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;background:var(--bg-secondary)">
+      <button class="btn btn-ghost" id="btnPrev" onclick="navigate(-1)">← Zurück</button>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;max-width:400px" id="questionNav"></div>
+      <button class="btn btn-primary" id="btnNext" onclick="navigate(1)">Weiter →</button>
+    </div>
+  </div>
+
+  <!-- SUBMIT CONFIRM -->
+  <div class="modal-overlay" id="modalSubmit">
+    <div class="modal" style="max-width:480px">
+      <div class="modal-header">
+        <span class="modal-title">Prüfung einreichen</span>
+      </div>
+      <div class="modal-body">
+        <p style="color:var(--text-secondary);margin-bottom:16px">Bist du sicher? Du kannst deine Antworten nach dem Einreichen nicht mehr ändern.</p>
+        <div id="submitSummary" style="background:var(--bg-elevated);border-radius:var(--radius);padding:14px;font-family:var(--font-mono);font-size:13px"></div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-ghost" onclick="APP.closeModal('modalSubmit')">Weiter bearbeiten</button>
+        <button class="btn btn-primary" onclick="submitExam()">Einreichen</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- DONE STATE -->
+  <div id="doneState" class="hidden" style="min-height:100vh;display:flex;align-items:center;justify-content:center;padding:24px;position:relative;z-index:1">
+    <div style="max-width:480px;width:100%;text-align:center">
+      <div style="font-size:64px;margin-bottom:16px">✓</div>
+      <h1 style="font-size:28px;font-weight:700;margin-bottom:8px">Eingereicht</h1>
+      <p class="text-secondary mb-24">Deine Antworten wurden erfolgreich gespeichert.</p>
+      <div class="card mb-24">
+        <div class="result-score-ring" id="doneScoreRing">
+          <div class="result-score-pct" id="doneScorePct">—</div>
+          <div class="result-score-label">SCORE</div>
+        </div>
+        <div class="flex justify-between mt-16" style="padding:0 16px">
+          <div><div class="stat-label">Richtig</div><div style="font-size:22px;font-weight:700;color:var(--accent-green)" id="doneCorrect">—</div></div>
+          <div><div class="stat-label">Falsch</div><div style="font-size:22px;font-weight:700;color:var(--accent-red)" id="doneWrong">—</div></div>
+          <div><div class="stat-label">Offen</div><div style="font-size:22px;font-weight:700;color:var(--accent-amber)" id="donePending">—</div></div>
+        </div>
+        <div style="margin-top:16px;padding-top:16px;border-top:1px solid var(--border);font-family:var(--font-mono);font-size:13px;color:var(--text-muted)">
+          Freitextantworten werden manuell bewertet.
+        </div>
+      </div>
+      <div id="doneReview" style="text-align:left"></div>
+      <div class="text-xs text-muted font-mono mt-24">Made by Sora · Wissensabfragen</div>
+    </div>
+  </div>
+
+  <div class="toast-container" id="toastContainer"></div>
+
+  <script src="app.js"></script>
+  <script>
+  const params = new URLSearchParams(location.search);
+  const SESSION_ID = params.get('s') || sessionStorage.getItem('wa_session_id');
+  const PARTICIPANT = sessionStorage.getItem('wa_participant_name') || 'Anonym';
+
+  let session = null;
+  let questions = [];
+  let answers = {};
+  let currentQ = 0;
+  let timerInterval = null;
+  let timeLeft = 0;
+  let zuordnungState = {}; // per question: {left: selectedLeft, matched: {left:right}}
+
+  function init() {
+    if (!SESSION_ID) { window.location.href = 'index.html'; return; }
+    const sessions = APP.get(APP.storageKeys.sessions);
+    session = sessions.find(s => s.id === SESSION_ID);
+    if (!session || session.status !== 'active') {
+      document.getElementById('loadingState').innerHTML = `
+        <div style="text-align:center">
+          <div style="font-size:48px;margin-bottom:16px;opacity:0.3">⬡</div>
+          <div style="font-size:18px;font-weight:700;margin-bottom:8px">Sitzung nicht verfügbar</div>
+          <div class="text-muted">Diese Sitzung ist nicht aktiv oder existiert nicht.</div>
+          <a href="index.html" class="btn btn-ghost mt-24" style="display:inline-flex">← Zurück</a>
+        </div>`;
+      return;
+    }
+
+    const allQs = APP.get(APP.storageKeys.questions);
+    let qList = allQs.filter(q => session.questionIds.includes(q.id));
+    if (session.order === 'shuffle') qList = APP.shuffle(qList);
+    questions = qList;
+
+    document.getElementById('loadingState').classList.add('hidden');
+    document.getElementById('introState').classList.remove('hidden');
+    document.getElementById('introTitle').textContent = session.name;
+    document.getElementById('introSubtitle').textContent = APP.formatShortDate(session.date);
+    document.getElementById('introName').textContent = PARTICIPANT;
+    document.getElementById('introQCount').textContent = questions.length;
+    document.getElementById('introTimer').textContent = session.timer ? `${session.timer} Min.` : 'Kein Limit';
+    document.getElementById('introCode').textContent = session.code;
+    if (session.desc) {
+      document.getElementById('introDesc').textContent = session.desc;
+    } else {
+      document.getElementById('introDesc').remove();
+    }
+  }
+
+  function startExam() {
+    document.getElementById('introState').classList.add('hidden');
+    document.getElementById('examState').classList.remove('hidden');
+    document.getElementById('examSessionName').textContent = session.name;
+    document.getElementById('examParticipantName').textContent = PARTICIPANT;
+    document.getElementById('examTotal').textContent = questions.length;
+
+    if (session.timer > 0) {
+      timeLeft = session.timer * 60;
+      updateTimerDisplay();
+      timerInterval = setInterval(() => {
+        timeLeft--;
+        updateTimerDisplay();
+        if (timeLeft <= 0) { clearInterval(timerInterval); submitExamForce(); }
+      }, 1000);
+    } else {
+      document.getElementById('examTimer').textContent = '∞';
+    }
+
+    questions.forEach(q => { answers[q.id] = null; zuordnungState[q.id] = { selected: null, matched: {} }; });
+    renderQuestion();
+    renderNav();
+  }
+
+  function updateTimerDisplay() {
+    const m = Math.floor(timeLeft / 60);
+    const s = timeLeft % 60;
+    const el = document.getElementById('examTimer');
+    el.textContent = `${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`;
+    el.className = 'exam-timer' + (timeLeft <= 300 ? ' warning' : '') + (timeLeft <= 60 ? ' danger' : '');
+  }
+
+  function renderQuestion() {
+    const q = questions[currentQ];
+    document.getElementById('examCurrent').textContent = currentQ + 1;
+    document.getElementById('examProgressBar').style.width = `${((currentQ+1)/questions.length)*100}%`;
+    document.getElementById('btnPrev').disabled = currentQ === 0;
+
+    const isLast = currentQ === questions.length - 1;
+    const btn = document.getElementById('btnNext');
+    if (isLast) {
+      btn.textContent = 'Einreichen';
+      btn.onclick = () => confirmSubmit();
+      btn.className = 'btn btn-success';
+    } else {
+      btn.textContent = 'Weiter →';
+      btn.onclick = () => navigate(1);
+      btn.className = 'btn btn-primary';
+    }
+
+    let answerHTML = '';
+    if (q.type === 'single_choice') {
+      const keys = ['A','B','C','D','E','F'];
+      answerHTML = q.options.map((o, i) => `
+        <div class="answer-option ${answers[q.id] === o.id ? 'selected' : ''}" onclick="selectSingle('${q.id}','${o.id}')">
+          <div class="option-key">${keys[i]||i+1}</div>
+          <span>${o.text}</span>
+        </div>`).join('');
+    } else if (q.type === 'multiple_choice') {
+      const selected = answers[q.id] || [];
+      const keys = ['A','B','C','D','E','F'];
+      answerHTML = `<div class="text-xs text-muted font-mono mb-12">Mehrere Antworten möglich</div>` +
+        q.options.map((o, i) => `
+          <div class="answer-option ${selected.includes(o.id) ? 'selected' : ''}" onclick="selectMulti('${q.id}','${o.id}')">
+            <div class="option-key" style="border-radius:2px">${keys[i]||i+1}</div>
+            <span>${o.text}</span>
+          </div>`).join('');
+    } else if (q.type === 'freitext') {
+      answerHTML = `<textarea class="freitext-answer" placeholder="Antwort eingeben..."
+        oninput="answers['${q.id}']=this.value">${answers[q.id] || ''}</textarea>`;
+    } else if (q.type === 'zuordnung') {
+      const state = zuordnungState[q.id];
+      const shuffledRights = APP.shuffle(q.pairs.map(p => p.right));
+      answerHTML = `
+        <div class="text-xs text-muted font-mono mb-12">Klicke einen Begriff links, dann die passende Definition rechts</div>
+        <div class="zuordnung-grid">
+          <div>
+            <h4>Begriffe</h4>
+            ${q.pairs.map(p => {
+              const isMatched = state.matched[p.left] !== undefined;
+              const isSelected = state.selected === p.left;
+              return `<div class="zuordnung-item ${isMatched ? 'matched' : ''} ${isSelected ? 'selected-left' : ''}"
+                onclick="zuSelectLeft('${q.id}','${p.left}')">${p.left}${isMatched ? ` ⇌ ${state.matched[p.left]}` : ''}</div>`;
+            }).join('')}
+          </div>
+          <div>
+            <h4>Definitionen</h4>
+            ${shuffledRights.map(r => {
+              const alreadyUsed = Object.values(state.matched).includes(r);
+              return `<div class="zuordnung-item ${alreadyUsed ? 'matched' : ''}"
+                onclick="zuSelectRight('${q.id}','${r}')" style="${alreadyUsed ? 'opacity:0.4;cursor:default' : ''}">${r}</div>`;
+            }).join('')}
+          </div>
+        </div>`;
+    }
+
+    document.getElementById('examBody').innerHTML = `
+      <div class="question-card">
+        <div class="question-meta">
+          <span class="question-type-tag">${Q_TYPES[q.type]?.icon} ${Q_TYPES[q.type]?.label}</span>
+          <span class="badge badge-draft">${q.points} Punkt${q.points!==1?'e':''}</span>
+        </div>
+        <div class="question-text">${q.text}</div>
+        ${answerHTML}
+      </div>`;
+    renderNav();
+  }
+
+  function selectSingle(qid, optId) {
+    answers[qid] = optId;
+    renderQuestion();
+  }
+
+  function selectMulti(qid, optId) {
+    if (!answers[qid]) answers[qid] = [];
+    const idx = answers[qid].indexOf(optId);
+    if (idx >= 0) answers[qid].splice(idx, 1);
+    else answers[qid].push(optId);
+    renderQuestion();
+  }
+
+  function zuSelectLeft(qid, left) {
+    const state = zuordnungState[qid];
+    if (state.matched[left] !== undefined) { delete state.matched[left]; answers[qid] = {...state.matched}; renderQuestion(); return; }
+    state.selected = state.selected === left ? null : left;
+    renderQuestion();
+  }
+
+  function zuSelectRight(qid, right) {
+    const state = zuordnungState[qid];
+    if (!state.selected) return;
+    if (Object.values(state.matched).includes(right)) return;
+    state.matched[state.selected] = right;
+    answers[qid] = {...state.matched};
+    state.selected = null;
+    renderQuestion();
+  }
+
+  function renderNav() {
+    document.getElementById('questionNav').innerHTML = questions.map((q, i) => {
+      const answered = answers[q.id] !== null && answers[q.id] !== undefined && answers[q.id] !== '';
+      return `<div onclick="goToQ(${i})" style="
+        width:28px;height:28px;border-radius:3px;border:1px solid ${i===currentQ ? 'var(--accent)' : answered ? 'var(--accent-green)' : 'var(--border)'};
+        background:${i===currentQ ? 'var(--accent-glow)' : answered ? 'rgba(0,255,136,0.08)' : 'transparent'};
+        display:flex;align-items:center;justify-content:center;cursor:pointer;
+        font-size:10px;font-family:var(--font-mono);color:${i===currentQ ? 'var(--accent)' : answered ? 'var(--accent-green)' : 'var(--text-muted)'};
+        transition:var(--transition)">${i+1}</div>`;
+    }).join('');
+  }
+
+  function goToQ(i) { currentQ = i; renderQuestion(); }
+
+  function navigate(dir) {
+    const next = currentQ + dir;
+    if (next < 0 || next >= questions.length) return;
+    currentQ = next;
+    renderQuestion();
+  }
+
+  function confirmSubmit() {
+    const answered = Object.values(answers).filter(a => a !== null && a !== undefined && a !== '').length;
+    const unanswered = questions.length - answered;
+    document.getElementById('submitSummary').innerHTML = `
+      <div>Fragen gesamt: <strong>${questions.length}</strong></div>
+      <div>Beantwortet: <strong style="color:var(--accent-green)">${answered}</strong></div>
+      <div>Offen: <strong style="color:${unanswered > 0 ? 'var(--accent-red)' : 'var(--accent-green)'}">${unanswered}</strong></div>`;
+    APP.openModal('modalSubmit');
+  }
+
+  function submitExamForce() { submitExam(true); }
+
+  function submitExam(forced = false) {
+    if (timerInterval) clearInterval(timerInterval);
+    APP.closeModal('modalSubmit');
+
+    const submissionAnswers = questions.map(q => {
+      const score = APP.autoScore(q, answers[q.id]);
+      return {
+        questionId: q.id,
+        type: q.type,
+        answer: answers[q.id],
+        score: score,
+        maxScore: q.points,
+      };
+    });
+
+    const submission = {
+      id: APP.uid(),
+      sessionId: session.id,
+      participantName: PARTICIPANT,
+      submittedAt: APP.now(),
+      forced,
+      answers: submissionAnswers,
+    };
+
+    const subs = APP.get(APP.storageKeys.submissions);
+    subs.push(submission);
+    APP.set(APP.storageKeys.submissions, subs);
+
+    showDone(submission);
+  }
+
+  function showDone(sub) {
+    document.getElementById('examState').classList.add('hidden');
+    document.getElementById('doneState').classList.remove('hidden');
+
+    const maxPts = sub.answers.reduce((a,x) => a + x.maxScore, 0);
+    const gotPts = sub.answers.filter(a => a.score !== null).reduce((a,x) => a + x.score, 0);
+    const pct = maxPts ? Math.round((gotPts/maxPts)*100) : 0;
+    const correct = sub.answers.filter(a => a.score !== null && a.score >= a.maxScore).length;
+    const wrong = sub.answers.filter(a => a.score !== null && a.score < a.maxScore).length;
+    const pending = sub.answers.filter(a => a.score === null).length;
+
+    document.getElementById('doneScorePct').textContent = pending ? '?' : `${pct}%`;
+    document.getElementById('doneScorePct').style.color = APP.scoreColor(pct);
+    document.getElementById('doneCorrect').textContent = correct;
+    document.getElementById('doneWrong').textContent = wrong;
+    document.getElementById('donePending').textContent = pending;
+
+    const qs = APP.get(APP.storageKeys.questions);
+    document.getElementById('doneReview').innerHTML = sub.answers.map(a => {
+      const q = qs.find(x => x.id === a.questionId);
+      if (!q) return '';
+      const isPending = a.score === null;
+      const isCorrect = !isPending && a.score >= a.maxScore;
+      return `<div class="answer-review ${isPending ? 'pending' : isCorrect ? 'correct' : 'wrong'}" style="margin-bottom:10px">
+        <div class="flex justify-between mb-6">
+          <div class="question-type-tag">${Q_TYPES[q.type]?.icon} ${Q_TYPES[q.type]?.label}</div>
+          <div style="font-family:var(--font-mono);font-size:11px;color:${isPending?'var(--accent-amber)':isCorrect?'var(--accent-green)':'var(--accent-red)'}">
+            ${isPending ? 'Wird bewertet' : `${a.score}/${a.maxScore} Pkt.`}
+          </div>
+        </div>
+        <div style="font-size:14px;font-weight:500">${q.text}</div>
+      </div>`;
+    }).join('');
+  }
+
+  init();
+  </script>
+</body>
+</html>
